@@ -1,6 +1,6 @@
 # USAGE
 # python text_recognition.py --east frozen_east_text_detection.pb --image images/example_01.jpg
-# python text_recognition.py --east frozen_east_text_detection.pb --image images/example_04.jpg --padding 0.05
+# python3.6 text_recognition.py --east frozen_east_text_detection.pb --image images/22.jpg --padding 0.20 --psm 7
 # -*- coding: utf-8 -*-
 # import the necessary packages
 from imutils.object_detection import non_max_suppression
@@ -59,32 +59,6 @@ def decode_predictions(scores, geometry):
 			endY = int(offsetY - (sin * xData1[x]) + (cos * xData2[x]))
 			startX = int(endX - w)
 			startY = int(endY - h)
-			iter = list(range(0, numCols))
-			iter.remove(x)
-			for x_i in iter:
-			    if scoresData[x_i] < args["min_confidence"]:
-			        continue
-			    (offsetX_i, offsetY_i) = (x_i * 4.0, y * 4.0)
-
-                # extract the rotation angle for the prediction and
-                # then compute the sin and cosine
-			    angle_i = anglesData[x_i]
-			    cos_i = np.cos(angle_i)
-			    sin_i = np.sin(angle_i)
-
-                # use the geometry volume to derive the width and height
-                # of the bounding box
-			    h_i = xData0[x_i] + xData2[x_i]
-			    w_i = xData1[x_i] + xData3[x_i]
-
-                # compute both the starting and ending (x, y)-coordinates
-                # for the text prediction bounding box
-			    endX_i = int(offsetX_i + (cos_i * xData1[x_i]) + (sin_i * xData2[x_i]))
-			    endY_i = int(offsetY_i - (sin_i * xData1[x_i]) + (cos_i * xData2[x_i]))
-			    startX_i = int(endX_i - w_i)
-			    startY_i = int(endY_i - h_i)
-			    if (((startY - startY_i)/startY) < 0.8) and (endX < endX_i):
-			        endX = endX_i
 
 			# add the bounding box coordinates and probability score
 			# to our respective lists
@@ -93,6 +67,36 @@ def decode_predictions(scores, geometry):
 
 	# return a tuple of the bounding boxes and associated confidences
 	return (rects, confidences)
+
+def merge_areas(boxes):
+	boxes_out = []
+	banned_index = []
+	rows, columns = boxes.shape
+	endY_maxpop= 0
+	index_maxY = 0
+	index_aux = 0
+	for index in range(0,rows):
+		boxes_levels = []
+		if index in banned_index:
+			continue
+		boxes_levels.append(boxes[index])
+		for index_i in range(0,rows):
+			if index is index_i or index_i in banned_index:
+				continue
+			ySimilarity=(abs(boxes[index][1] - boxes[index_i][1]))
+			if (ySimilarity < 10):
+			    boxes_levels.append(boxes[index_i])
+			    banned_index.append(index_i)
+		startX_max, startY_max, endX_max, endY_max = np.max(boxes_levels, axis=0)
+		startX_min, startY_min, endX_min, endY_min = np.min(boxes_levels, axis=0)
+
+		if endY_max > endY_maxpop:
+			endY_maxpop = endY_max
+			index_maxY = index_aux
+		index_aux += 1
+		boxes_out.append((startX_min, startY_min, endX_max, endY_max))
+	boxes_out.pop(index_maxY)
+	return boxes_out
 
 # construct the argument parser and parse the arguments
 ap = argparse.ArgumentParser()
@@ -159,7 +163,8 @@ print('Detection Running time: ', time.time() - start_detection, ' seconds')
 # suppress weak, overlapping bounding boxes
 (rects, confidences) = decode_predictions(scores, geometry)
 boxes = non_max_suppression(np.array(rects), probs=confidences)
-print('Cantidad de resultados: ', len(boxes))
+boxes = merge_areas(boxes)
+print('Number of regions detected: ', len(boxes))
 
 # initialize the list of results
 results = []
