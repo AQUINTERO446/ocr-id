@@ -309,8 +309,13 @@ for (startX, startY, endX, endY) in boxes:
     # treating the ROI as a single line of text
     config = ("-l spa --oem 1 --psm "+str(args["psm"]))
     text = pytesseract.image_to_string(roi, config=config)
+
+    # strip out non-ASCII text and to upper case
     pattern = re.compile('([^\s\w]|_)+', re.UNICODE)
-    text= pattern.sub('', text)
+    text = pattern.sub('', text).upper()
+    #Ignore all empty ocr
+    if not text:
+        continue
     # cv2.imwrite("/home/images/TextDetection{}.png".format(text), roi)
 
     # add the bounding box coordinates and OCR'd text to the list
@@ -326,12 +331,6 @@ for ((startX, startY, endX, endY), text) in results:
     print("OCR TEXT")
     print("========")
     print("{}\n".format(text))
-
-    # strip out non-ASCII text so we can draw the text on the image
-    # using OpenCV, then draw the text and a bounding box surrounding
-    # the text region of the input image
-    text = "".join([c if ord(c) < 128 else "" for c in text]).strip()
-
     output = cv2.rectangle(output,
                            (startX, startY),
                            (endX, endY),
