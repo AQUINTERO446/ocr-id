@@ -15,4 +15,4 @@ Deep Learning based Text Recognition (OCR) using Tesseract 4.0 and OpenCV 3.4.3 
 
 ## License
 
-Este proyecto está licenciado bajo la licencia MIT. Consulte el archivo [LICENSE](LICENSE) para obtener más detalles.
+This project is licensed under the MIT license. See the file [LICENSE](LICENSE) for more details.
